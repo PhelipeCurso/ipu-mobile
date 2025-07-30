@@ -15,7 +15,9 @@ import 'screens/WelcomeScreen.dart';
 import 'screens/gerenciar_informacoes_page.dart';
 import 'screens/eventos_screen.dart';
 import 'screens/noticias_screen.dart';
-import 'screens/PedidosOracaoScreen.dart';
+import 'screens/PedidosOracaoScreen.dart';  
+import 'screens/AgendaScreen.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 /// Cores da identidade visual IPU
 class AppColors {
@@ -91,6 +93,8 @@ class MyApp extends StatelessWidget {
         '/eventos': (context) => const EventosScreen(),
         '/noticias': (context) => const NoticiasScreen(),
         '/pedidos-oracao': (context) => const PedidosOracaoScreen(),
+        '/nova-agenda': (context) => const AgendaScreen(podeEditarAgendas: true),
+        '/agenda': (context) => const AgendaScreen(podeEditarAgendas: false),
       },
       debugShowCheckedModeBanner: false,
     );

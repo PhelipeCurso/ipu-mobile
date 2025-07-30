@@ -71,7 +71,7 @@ class EventosScreen extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(e['descricao']),
                       const SizedBox(height: 8),
-                      Text('📍 Local: ${e['local']}'),
+                      Text('📍 Local: Igreja Povos Unidos'),
                       if (e['data'] != null)
                         Text(
                           '📅 Data: ${e['data'].toString().substring(0, 10)}',

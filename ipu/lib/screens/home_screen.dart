@@ -8,6 +8,7 @@ import 'package:ipu/widgets/menu_lateral_widget.dart';
 import 'package:intl/intl.dart';
 import 'package:ipu/widgets/AniversariantesDoMesWidget.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:ipu/screens/AgendaScreen.dart';
 
 class AppColors {
   static const vermelho = Color(0xFFC42112);
@@ -32,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool exibirMenuLancamentos = false;
   bool podeGerenciarAgenda = false;
   bool podeVerPedidosOracao = false;
+  bool podeEditarAgendas = false;
 
   final List<String> referencias = [
     'joao+3:16',
@@ -72,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
       exibirMenuLancamentos = dados['cargoEclesiastico'] == true;
       podeGerenciarAgenda = dados['podeGerenciarAgenda'] == true;
       podeVerPedidosOracao = dados['podeVerPedidosOracao'] == true;
+      podeEditarAgendas = dados['podeEditarAgendas'] == true;
     });
   }
 
@@ -119,7 +122,10 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
     });
-  }
+    // 🔔 Inscreve no tópico "agendaEventos"
+  await messaging.subscribeToTopic('agendaEventos');
+  print('📬 Inscrito no tópico agendaEventos');
+}
 
   Future<void> carregarPalavra() async {
     setState(() => carregando = true);
@@ -317,6 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
         exibirMenuLancamentos: exibirMenuLancamentos,
         podeGerenciarAgenda: podeGerenciarAgenda,
         podeVerPedidosOracao: podeVerPedidosOracao,
+        podeEditarAgendas: podeEditarAgendas,
       ),
       body:
           carregando

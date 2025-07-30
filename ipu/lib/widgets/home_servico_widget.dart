@@ -54,6 +54,7 @@ class _HomeServicoWidgetState extends State<HomeServicoWidget> {
         exibirMenuLancamentos: false,
         podeGerenciarAgenda: false,
         podeVerPedidosOracao: false,
+        podeEditarAgendas: false,
       ),
       appBar: AppBar(title: const Text('Destaques da Área de Serviço')),
       body: Padding(

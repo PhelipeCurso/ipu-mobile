@@ -4,17 +4,20 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:ipu/screens/AgendaScreen.dart';
 
 class MenuLateralWidget extends StatefulWidget {
   final bool exibirMenuLancamentos;
   final bool podeGerenciarAgenda;
   final bool podeVerPedidosOracao;
+  final bool podeEditarAgendas;
 
   const MenuLateralWidget({
     super.key,
     required this.exibirMenuLancamentos,
     required this.podeGerenciarAgenda,
     required this.podeVerPedidosOracao,
+    required this.podeEditarAgendas,
   });
 
   @override
@@ -74,10 +77,16 @@ class _MenuLateralWidgetState extends State<MenuLateralWidget> {
             title: const Text('Início'),
             onTap: () => Navigator.pop(context),
           ),
+          if (widget.podeGerenciarAgenda)
           ListTile(
             leading: const Icon(Icons.event),
             title: const Text('Agenda da Semana'),
-            onTap: () => Navigator.pop(context),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => AgendaScreen(podeEditarAgendas: widget.podeEditarAgendas),
+              ));
+            },
           ),
           ListTile(
             leading: const Icon(Icons.video_library),

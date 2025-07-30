@@ -69,64 +69,87 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: carregando
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    'Seja Bem-Vindo(a), $nome!',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    '📖 Palavra do Dia',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    '"$palavra"',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    referencia,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontStyle: FontStyle.italic,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => const HomeScreen()),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
-                    ),
-                    child: const Text('Ir para Início'),
-                  ),
-                ],
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: carregando
+        ? const Center(child: CircularProgressIndicator())
+        : Stack(
+            fit: StackFit.expand,
+            children: [
+              // 🌄 Imagem de fundo
+              Image.asset(
+                'assets/img/login.png', // Substitua pelo caminho da sua imagem
+                fit: BoxFit.cover,
               ),
-            ),
-    );
-  }
+
+              // 🧼 Camada escura opcional para melhor leitura
+              Container(
+                color: Colors.black.withOpacity(0.5),
+              ),
+
+              // Conteúdo
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Seja Bem-Vindo(a), $nome!',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          '📖 Palavra do Dia',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          '"$palavra"',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 16, color: Colors.white),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          referencia,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontStyle: FontStyle.italic,
+                            color: Colors.white70,
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (_) => const HomeScreen()),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+                          ),
+                          child: const Text('Ir para Início'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+  );
+} 
 }
+         
