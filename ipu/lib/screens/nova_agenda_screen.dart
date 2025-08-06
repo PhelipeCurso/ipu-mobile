@@ -20,41 +20,35 @@ class _NovaAgendaScreenState extends State<NovaAgendaScreen> {
   bool _carregando = false;
 
   Future<void> _salvarEvento() async {
-    if (!_formKey.currentState!.validate() || _dataHoraSelecionada == null) return;
+  if (!_formKey.currentState!.validate() || _dataHoraSelecionada == null) return;
 
-    setState(() => _carregando = true);
+  setState(() => _carregando = true);
 
-    try {
-      await FirebaseFirestore.instance.collection('agenda').add({
-        'titulo': _tituloController.text.trim(),
-        'descricao': _descricaoController.text.trim(),
-        'local': _localController.text.trim(),
-        'dataHora': Timestamp.fromDate(_dataHoraSelecionada!),
-        'criadoEm': FieldValue.serverTimestamp(),
-      });
-      // 🔔 Enviar notificação
-    await FirebaseFunctions.instance
-        .httpsCallable('novoEventoAgenda')
-        .call({
-         'titulo': _tituloController.text.trim(),
-         'local': _localController.text.trim(),
-         'dataHora': _dataHoraSelecionada!.toIso8601String(),
+  try {
+    await FirebaseFirestore.instance.collection('agenda').add({
+      'titulo': _tituloController.text.trim(),
+      'descricao': _descricaoController.text.trim(),
+      'local': _localController.text.trim(),
+      'dataHora': Timestamp.fromDate(_dataHoraSelecionada!),
+      'criadoEm': FieldValue.serverTimestamp(),
     });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Evento salvo com sucesso!')),
-        );
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      print('Erro ao salvar evento: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao salvar evento.')),
-      );
-    }
 
-    setState(() => _carregando = false);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Evento salvo com sucesso!')),
+      );
+      Navigator.pop(context);
+    }
+  } catch (e) {
+    print('Erro ao salvar evento: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Erro ao salvar evento.')),
+    );
   }
+
+  setState(() => _carregando = false);
+}
+
 
   Future<void> _selecionarDataHora() async {
     final data = await showDatePicker(

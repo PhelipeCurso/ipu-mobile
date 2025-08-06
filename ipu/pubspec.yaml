@@ -81,7 +81,7 @@ flutter:
     - assets/img/google.png
     - assets/img/login.png
     - assets/img/pixipu.png
-    
+    - assets/img/papeldeparedehome.jpg
 
   fonts:
     - family: Montserrat

@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:ipu/widgets/AniversariantesDoMesWidget.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:ipu/screens/AgendaScreen.dart';
+import 'package:ipu/widgets/PalavraDoDiaWidget.dart';
 
 class AppColors {
   static const vermelho = Color(0xFFC42112);
@@ -54,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
     carregarPalavra();
     verificarCargoEclesiastico();
     configurarFirebaseMessaging();
+    const PalavraDoDiaWidget();
   }
 
   @override
@@ -122,10 +124,13 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
     });
-    // 🔔 Inscreve no tópico "agendaEventos"
-  await messaging.subscribeToTopic('agendaEventos');
-  print('📬 Inscrito no tópico agendaEventos');
-}
+    // 🔔 "📬 Inscrito em todos os tópicos de notificação"
+    await messaging.subscribeToTopic('agendaEventos');
+    await messaging.subscribeToTopic('noticias');
+    await messaging.subscribeToTopic('eventos');
+    await messaging.subscribeToTopic('aniversariantes');
+    print('📬 Inscrito em todos os tópicos de notificação');
+  }
 
   Future<void> carregarPalavra() async {
     setState(() => carregando = true);
@@ -264,7 +269,10 @@ class _HomeScreenState extends State<HomeScreen> {
             if (texto.isEmpty) return;
 
             final user = FirebaseAuth.instance.currentUser;
-            if (user == null) return;
+            if (user == null) {
+              print('❌ Usuário não autenticado');
+              return;
+            }
 
             try {
               await FirebaseFirestore.instance
@@ -328,262 +336,266 @@ class _HomeScreenState extends State<HomeScreen> {
       body:
           carregando
               ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '📖 Palavra do Dia:',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+              : Stack(
+                children: [
+                  // 📸 Fundo com imagem local
+                  Container(
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/img/papeldeparedehome.jpg'),
+                        fit: BoxFit.cover,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Text(palavra, style: const TextStyle(fontSize: 18)),
-                    const SizedBox(height: 8),
-                    Text(
-                      referencia,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontStyle: FontStyle.italic,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: carregarPalavra,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Nova Palavra'),
-                    ),
+                  ),
 
-                    // 🔔 Últimas Notícias
-                    buildSectionTitle('📢 Últimas Notícias'),
-                    StreamBuilder<QuerySnapshot>(
-                      stream:
-                          FirebaseFirestore.instance
-                              .collection('informacoes')
-                              .doc('noticias')
-                              .collection('itens')
-                              .orderBy('criadoEm', descending: true)
-                              .limit(1)
-                              .snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        }
+                  // 🌓 Camada escura sobre a imagem
+                  Container(color: Colors.black.withOpacity(0.5)),
 
-                        final docs = snapshot.data?.docs ?? [];
+                  // 🌟 Conteúdo
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                         PalavraDoDiaWidget(),
+                        
 
-                        if (docs.isEmpty) {
-                          return const Text('Nenhuma notícia encontrada.');
-                        }
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ...docs.map((doc) {
-                              final data = doc.data() as Map<String, dynamic>;
-                              final titulo = data['titulo'] ?? 'Sem título';
-                              final timestamp = data['criadoEm'];
-                              final dataTexto =
-                                  timestamp is Timestamp
-                                      ? DateFormat(
-                                        'dd/MM/yyyy',
-                                      ).format(timestamp.toDate())
-                                      : 'Data desconhecida';
-                              final imagem = data['midiaUrl'];
-
-                              return Card(
-                                elevation: 2,
-                                margin: const EdgeInsets.symmetric(vertical: 8),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (imagem != null)
-                                      ClipRRect(
-                                        borderRadius:
-                                            const BorderRadius.vertical(
-                                              top: Radius.circular(12),
-                                            ),
-                                        child: Image.network(
-                                          imagem,
-                                          height: 180,
-                                          width: double.infinity,
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
-                                    Padding(
-                                      padding: const EdgeInsets.all(12),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            titulo,
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            dataTexto,
-                                            style: const TextStyle(
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                        // 🔔 Últimas Notícias
+                        buildSectionTitle('📢 Últimas Notícias'),
+                        StreamBuilder<QuerySnapshot>(
+                          stream:
+                              FirebaseFirestore.instance
+                                  .collection('informacoes')
+                                  .doc('noticias')
+                                  .collection('itens')
+                                  .orderBy('criadoEm', descending: true)
+                                  .limit(1)
+                                  .snapshots(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
                               );
-                            }),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton.icon(
-                                onPressed:
-                                    () => Navigator.pushNamed(
-                                      context,
-                                      '/noticias',
+                            }
+
+                            final docs = snapshot.data?.docs ?? [];
+
+                            if (docs.isEmpty) {
+                              return const Text('Nenhuma notícia encontrada.');
+                            }
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ...docs.map((doc) {
+                                  final data =
+                                      doc.data() as Map<String, dynamic>;
+                                  final titulo = data['titulo'] ?? 'Sem título';
+                                  final timestamp = data['criadoEm'];
+                                  final dataTexto =
+                                      timestamp is Timestamp
+                                          ? DateFormat(
+                                            'dd/MM/yyyy',
+                                          ).format(timestamp.toDate())
+                                          : 'Data desconhecida';
+                                  final imagem = data['midiaUrl'];
+
+                                  return Card(
+                                    elevation: 2,
+                                    margin: const EdgeInsets.symmetric(
+                                      vertical: 8,
                                     ),
-                                icon: const Icon(
-                                  Icons.arrow_forward_ios,
-                                  size: 16,
-                                ),
-                                label: const Text('Ver todas'),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-
-                    // 🗓️ Próximos Eventos
-                    buildSectionTitle('📅 Próximos Eventos'),
-                    StreamBuilder<QuerySnapshot>(
-                      stream:
-                          FirebaseFirestore.instance
-                              .collection('informacoes')
-                              .doc('eventos')
-                              .collection('itens')
-                              .orderBy('criadoEm', descending: true)
-                              .limit(1)
-                              .snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-
-                        final docs = snapshot.data?.docs ?? [];
-
-                        if (docs.isEmpty) {
-                          return const Text('Nenhum evento encontrado.');
-                        }
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ...docs.map((doc) {
-                              final data = doc.data() as Map<String, dynamic>;
-                              final titulo = data['titulo'] ?? 'Sem título';
-                              final timestamp = data['criadoEm'];
-                              final dataTexto =
-                                  timestamp is Timestamp
-                                      ? DateFormat(
-                                        'dd/MM/yyyy',
-                                      ).format(timestamp.toDate())
-                                      : 'Data desconhecida';
-                              final imagem = data['midiaUrl'];
-
-                              return Card(
-                                elevation: 2,
-                                margin: const EdgeInsets.symmetric(vertical: 8),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (imagem != null)
-                                      ClipRRect(
-                                        borderRadius:
-                                            const BorderRadius.vertical(
-                                              top: Radius.circular(12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        if (imagem != null)
+                                          ClipRRect(
+                                            borderRadius:
+                                                const BorderRadius.vertical(
+                                                  top: Radius.circular(12),
+                                                ),
+                                            child: Image.network(
+                                              imagem,
+                                              height: 180,
+                                              width: double.infinity,
+                                              fit: BoxFit.cover,
                                             ),
-                                        child: Image.network(
-                                          imagem,
-                                          height: 180,
-                                          width: double.infinity,
-                                          fit: BoxFit.cover,
+                                          ),
+                                        Padding(
+                                          padding: const EdgeInsets.all(12),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                titulo,
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                dataTexto,
+                                                style: const TextStyle(
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    Padding(
-                                      padding: const EdgeInsets.all(12),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            titulo,
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            dataTexto,
-                                            style: const TextStyle(
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                      ],
                                     ),
-                                  ],
+                                  );
+                                }),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton.icon(
+                                    onPressed:
+                                        () => Navigator.pushNamed(
+                                          context,
+                                          '/noticias',
+                                        ),
+                                    icon: const Icon(
+                                      Icons.arrow_forward_ios,
+                                      size: 16,
+                                    ),
+                                    label: const Text('Ver todas'),
+                                  ),
                                 ),
+                              ],
+                            );
+                          },
+                        ),
+
+                        // 🗓️ Próximos Eventos
+                        buildSectionTitle('📅 Próximos Eventos'),
+                        StreamBuilder<QuerySnapshot>(
+                          stream:
+                              FirebaseFirestore.instance
+                                  .collection('informacoes')
+                                  .doc('eventos')
+                                  .collection('itens')
+                                  .orderBy('criadoEm', descending: true)
+                                  .limit(1)
+                                  .snapshots(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
                               );
-                            }),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton.icon(
-                                onPressed:
-                                    () => Navigator.pushNamed(
-                                      context,
-                                      '/eventos',
+                            }
+
+                            final docs = snapshot.data?.docs ?? [];
+
+                            if (docs.isEmpty) {
+                              return const Text('Nenhum evento encontrado.');
+                            }
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ...docs.map((doc) {
+                                  final data =
+                                      doc.data() as Map<String, dynamic>;
+                                  final titulo = data['titulo'] ?? 'Sem título';
+                                  final timestamp = data['criadoEm'];
+                                  final dataTexto =
+                                      timestamp is Timestamp
+                                          ? DateFormat(
+                                            'dd/MM/yyyy',
+                                          ).format(timestamp.toDate())
+                                          : 'Data desconhecida';
+                                  final imagem = data['midiaUrl'];
+
+                                  return Card(
+                                    elevation: 2,
+                                    margin: const EdgeInsets.symmetric(
+                                      vertical: 8,
                                     ),
-                                icon: const Icon(
-                                  Icons.arrow_forward_ios,
-                                  size: 16,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        if (imagem != null)
+                                          ClipRRect(
+                                            borderRadius:
+                                                const BorderRadius.vertical(
+                                                  top: Radius.circular(12),
+                                                ),
+                                            child: Image.network(
+                                              imagem,
+                                              height: 180,
+                                              width: double.infinity,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        Padding(
+                                          padding: const EdgeInsets.all(12),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                titulo,
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                dataTexto,
+                                                style: const TextStyle(
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton.icon(
+                                    onPressed:
+                                        () => Navigator.pushNamed(
+                                          context,
+                                          '/eventos',
+                                        ),
+                                    icon: const Icon(
+                                      Icons.arrow_forward_ios,
+                                      size: 16,
+                                    ),
+                                    label: const Text('Ver todos'),
+                                  ),
                                 ),
-                                label: const Text('Ver todos'),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
+                              ],
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
+                        buildDonationButton(context),
+                        const SizedBox(height: 24),
+                        buildPrayerRequestField(pedidoOracaoController),
+
+                        const AniversariantesWidget(),
+                      ],
                     ),
-
-                    const SizedBox(height: 16),
-                    buildDonationButton(context),
-                    const SizedBox(height: 24),
-                    buildPrayerRequestField(pedidoOracaoController),
-
-                    const AniversariantesWidget(),
-                  ],
-                ),
+                  ),
+                ],
               ),
     );
   }
