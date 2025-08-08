@@ -22,7 +22,7 @@ class EnvioPedidosOracao extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '🙋 ${pedido.nome}',
+                  '🙏🏼 ${pedido.nome}',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 IconButton(

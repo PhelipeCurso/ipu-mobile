@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/pedido_oracao_model.dart';
-import '../widgets/envio_pedidos_oracao.dart';
+import 'detalhe_pedido_oracao_screen.dart';
 
 class PedidosOracaoScreen extends StatelessWidget {
-  const PedidosOracaoScreen({super.key});
+  final bool podeMarcarComoLido; // controle de permissão
+
+  const PedidosOracaoScreen({super.key, this.podeMarcarComoLido = false});
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +40,37 @@ class PedidosOracaoScreen extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             itemCount: pedidos.length,
             itemBuilder: (context, index) {
-              return EnvioPedidosOracao(pedido: pedidos[index]);
+              final pedido = pedidos[index];
+              return Card(
+                elevation: 2,
+                margin: const EdgeInsets.symmetric(vertical: 6),
+                child: ListTile(
+                  title: Text(
+                    pedido.titulo ?? 'Pedido sem título',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    pedido.descricao ?? '',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Icon(
+                    pedido.lido == true ? Icons.check_circle : Icons.circle_outlined,
+                    color: pedido.lido == true ? Colors.green : Colors.grey,
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DetalhePedidoOracaoScreen(
+                          pedido: pedido,
+                          podeMarcarComoLido: podeMarcarComoLido,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
             },
           );
         },

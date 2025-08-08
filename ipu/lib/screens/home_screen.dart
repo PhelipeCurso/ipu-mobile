@@ -357,8 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                         PalavraDoDiaWidget(),
-                        
+                        PalavraDoDiaWidget(),
 
                         // 🔔 Últimas Notícias
                         buildSectionTitle('📢 Últimas Notícias'),

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:ipu/screens/AgendaScreen.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class MenuLateralWidget extends StatefulWidget {
   final bool exibirMenuLancamentos;
@@ -37,7 +38,10 @@ class _MenuLateralWidgetState extends State<MenuLateralWidget> {
   Future<void> _carregarDadosUsuarioLocal() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _nome = prefs.getString('nome_usuario') ?? FirebaseAuth.instance.currentUser?.displayName ?? 'Usuário';
+      _nome =
+          prefs.getString('nome_usuario') ??
+          FirebaseAuth.instance.currentUser?.displayName ??
+          'Usuário';
       _imagem = prefs.getString('imagem_usuario') ?? '';
     });
   }
@@ -45,6 +49,15 @@ class _MenuLateralWidgetState extends State<MenuLateralWidget> {
   void _logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
     Navigator.pushReplacementNamed(context, '/');
+  }
+
+  // Função para abrir link no app ou no navegador
+  Future<void> _launchSocial(Uri appUri, String webUrl) async {
+    if (await canLaunchUrl(appUri)) {
+      await launchUrl(appUri, mode: LaunchMode.externalApplication);
+    } else {
+      await launchUrl(Uri.parse(webUrl), mode: LaunchMode.externalApplication);
+    }
   }
 
   @override
@@ -60,15 +73,17 @@ class _MenuLateralWidgetState extends State<MenuLateralWidget> {
             accountEmail: Text(user?.email ?? ''),
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
-              backgroundImage: (_imagem.isNotEmpty && File(_imagem).existsSync())
-                  ? FileImage(File(_imagem))
-                  : null,
-              child: _imagem.isEmpty
-                  ? Text(
-                      _nome.isNotEmpty ? _nome[0].toUpperCase() : '?',
-                      style: const TextStyle(color: Colors.red, fontSize: 24),
-                    )
-                  : null,
+              backgroundImage:
+                  (_imagem.isNotEmpty && File(_imagem).existsSync())
+                      ? FileImage(File(_imagem))
+                      : null,
+              child:
+                  _imagem.isEmpty
+                      ? Text(
+                        _nome.isNotEmpty ? _nome[0].toUpperCase() : '?',
+                        style: const TextStyle(color: Colors.red, fontSize: 24),
+                      )
+                      : null,
             ),
             decoration: const BoxDecoration(color: Colors.red),
           ),
@@ -78,21 +93,54 @@ class _MenuLateralWidgetState extends State<MenuLateralWidget> {
             onTap: () => Navigator.pop(context),
           ),
           if (widget.podeGerenciarAgenda)
-          ListTile(
-            leading: const Icon(Icons.event),
-            title: const Text('Agenda da Semana'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(
-                builder: (_) => AgendaScreen(podeEditarAgendas: widget.podeEditarAgendas),
-              ));
-            },
+            ListTile(
+              leading: const Icon(Icons.event),
+              title: const Text('Agenda da Semana'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (_) => AgendaScreen(
+                          podeEditarAgendas: widget.podeEditarAgendas,
+                        ),
+                  ),
+                );
+              },
+            ),
+          // Redes Sociais Expansível
+          ExpansionTile(
+            leading: const Icon(Icons.public),
+            title: const Text('Redes Sociais'),
+            children: [
+              ListTile(
+                leading: const FaIcon(FontAwesomeIcons.youtube, color: Colors.red),
+                title: const Text('YouTube'),
+                onTap: () => _launchSocial(
+                  Uri.parse("vnd.youtube://channel/UCAbi1Uzs9-CS-HskQNaQhmg"), // Troque pelo seu ID de canal
+                  "https://www.youtube.com/@IgrejaPovosUnidos/playlists",
+                ),
+              ),
+              ListTile(
+                leading: const FaIcon(FontAwesomeIcons.tiktok, color: Colors.black),
+                title: const Text('TikTok'),
+                onTap: () => _launchSocial(
+                  Uri.parse("snssdk1128://user/profile/1234567890"), // Troque pelo ID numérico
+                  "https://www.tiktok.com/@igreja.povos.unidos?lang=pt-BR",
+                ),
+              ),
+              ListTile(
+                leading: const FaIcon(FontAwesomeIcons.instagram, color: Colors.purple),
+                title: const Text('Instagram'),
+                onTap: () => _launchSocial(
+                  Uri.parse("instagram://user?username=igrejapovosunidos"),
+                  "https://www.instagram.com/igrejapovosunidos",
+                ),
+              ),
+            ],
           ),
-          ListTile(
-            leading: const Icon(Icons.video_library),
-            title: const Text('Canal do YouTube'),
-            onTap: () => Navigator.pop(context),
-          ),
+
           if (widget.exibirMenuLancamentos)
             ListTile(
               leading: const Icon(Icons.attach_money),
@@ -128,6 +176,30 @@ class _MenuLateralWidgetState extends State<MenuLateralWidget> {
               Navigator.pushNamed(context, '/doacao');
             },
           ),
+
+          ListTile(
+            leading: const Icon(Icons.location_on),
+            title: const Text('📍 Faça-nos uma Visita'),
+            onTap: () async {
+              const endereco =
+                  'Igreja Pentecostal Unida, Rua Exemplo, 123, Cidade - UF';
+              final encodedAddress = Uri.encodeComponent(endereco);
+              final googleMapsUrl = 'https://maps.app.goo.gl/co8P7qotMc9aG1jx6';
+
+              if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
+                await launchUrl(
+                  Uri.parse(googleMapsUrl),
+                  mode: LaunchMode.externalApplication,
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Não foi possível abrir o Maps'),
+                  ),
+                );
+              }
+            },
+          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.settings),
@@ -137,24 +209,6 @@ class _MenuLateralWidgetState extends State<MenuLateralWidget> {
               Navigator.pushNamed(context, '/configuracoes');
             },
           ),
-          ListTile(
-          leading: const Icon(Icons.location_on),
-          title: const Text('📍 Faça-nos uma Visita'),
-          onTap: () async {
-          const endereco = 'Igreja Pentecostal Unida, Rua Exemplo, 123, Cidade - UF';
-          final encodedAddress = Uri.encodeComponent(endereco);
-          final googleMapsUrl = 'https://maps.app.goo.gl/co8P7qotMc9aG1jx6';
-
-           if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
-           await launchUrl(Uri.parse(googleMapsUrl), mode: LaunchMode.externalApplication);
-            } else {
-             ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Não foi possível abrir o Maps')),
-         );
-       }
-     },
-   ),
-
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Sair'),
