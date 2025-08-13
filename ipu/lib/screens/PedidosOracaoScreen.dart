@@ -46,11 +46,11 @@ class PedidosOracaoScreen extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(vertical: 6),
                 child: ListTile(
                   title: Text(
-                    pedido.titulo ?? 'Pedido sem título',
+                    pedido.nome ?? 'Pedido sem título',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
-                    pedido.descricao ?? '',
+                    pedido.mensagem ?? '',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),

@@ -72,7 +72,8 @@ class _CadastroScreenState extends State<CadastroScreen> {
   }
 
   Future<List<String>> _buscarAreasDeServico() async {
-    final snapshot = await FirebaseFirestore.instance.collection('segmentos').get();
+    final snapshot =
+        await FirebaseFirestore.instance.collection('segmentos').get();
     return snapshot.docs.map((doc) => doc['nome'] as String).toList();
   }
 
@@ -80,51 +81,113 @@ class _CadastroScreenState extends State<CadastroScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Cadastro do Membro')),
-      body: carregando
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(children: [
-                  _buildInput('Nome', 'nome'),
-                  _buildInput('CPF', 'cpf', tipo: TextInputType.number, formatter: [MaskedInputFormatter('###.###.###-##')]),
-                  _buildInput('Data de Nascimento', 'dataNascimento', tipo: TextInputType.number, formatter: [MaskedInputFormatter('##/##/####')]),
-                  _buildInput('Estado Civil', 'estadoCivil'),
-                  _buildCheckbox('É Batizado?', 'batizado'),
-                  _buildInput('Data do Batismo', 'dataBatismo', tipo: TextInputType.number, formatter: [MaskedInputFormatter('##/##/####')]),
-                  _buildInput('Cep', 'cep', tipo: TextInputType.number, formatter: [MaskedInputFormatter('#####-###')]),
-                  _buildInput('Logradouro', 'logradouro'),
-                  _buildInput('Número', 'numero'),
-                  _buildInput('Bairro', 'bairro'),
-                  _buildInput('Cidade', 'cidade'),
-                  _buildInput('Complemento', 'complemento'),
-                  _buildInput('Telefone', 'telefone', tipo: TextInputType.phone, formatter: [MaskedInputFormatter('(##) #####-####')]),
-                  _buildInput('Membro Desde', 'membroDesde', tipo: TextInputType.number, formatter: [MaskedInputFormatter('##/##/####')]),
-                  _buildCheckbox('Possui cargo eclesiástico?', 'cargoEclesiastico'),
-                  const SizedBox(height: 16),
-                  FutureBuilder<List<String>>(
-                    future: _buscarAreasDeServico(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const CircularProgressIndicator();
-                      final areas = snapshot.data!;
-                      return DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(labelText: 'Serve em alguma área?'),
-                        value: (_dados['areaDeServico'] as String?)?.isNotEmpty == true ? _dados['areaDeServico'] as String? : null,
-                        items: areas.map((area) => DropdownMenuItem(value: area, child: Text(area))).toList(),
-                        onChanged: (value) => setState(() => _dados['areaDeServico'] = value ?? ''),
-                        validator: (value) => value == null || value.isEmpty ? 'Selecione uma área' : null,
-                      );
-                    },
+      body:
+          carregando
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      _buildInput('Nome', 'nome'),
+                      _buildInput(
+                        'CPF',
+                        'cpf',
+                        tipo: TextInputType.number,
+                        formatter: [MaskedInputFormatter('###.###.###-##')],
+                      ),
+                      _buildInput(
+                        'Data de Nascimento',
+                        'dataNascimento',
+                        tipo: TextInputType.number,
+                        formatter: [MaskedInputFormatter('##/##/####')],
+                      ),
+                      _buildInput('Estado Civil', 'estadoCivil'),
+                      _buildCheckbox('É Batizado?', 'batizado'),
+                      _buildInput(
+                        'Data do Batismo',
+                        'dataBatismo',
+                        tipo: TextInputType.number,
+                        formatter: [MaskedInputFormatter('##/##/####')],
+                      ),
+                      _buildInput(
+                        'Cep',
+                        'cep',
+                        tipo: TextInputType.number,
+                        formatter: [MaskedInputFormatter('#####-###')],
+                      ),
+                      _buildInput('Logradouro', 'logradouro'),
+                      _buildInput('Número', 'numero'),
+                      _buildInput('Bairro', 'bairro'),
+                      _buildInput('Cidade', 'cidade'),
+                      _buildInput('Complemento', 'complemento'),
+                      _buildInput(
+                        'Telefone',
+                        'telefone',
+                        tipo: TextInputType.phone,
+                        formatter: [MaskedInputFormatter('(##) #####-####')],
+                      ),
+                      _buildInput(
+                        'Membro Desde',
+                        'membroDesde',
+                        tipo: TextInputType.number,
+                        formatter: [MaskedInputFormatter('##/##/####')],
+                      ),
+                      _buildCheckbox(
+                        'Possui cargo eclesiástico?',
+                        'cargoEclesiastico',
+                      ),
+                      const SizedBox(height: 16),
+                      FutureBuilder<List<String>>(
+                        future: _buscarAreasDeServico(),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData)
+                            return const CircularProgressIndicator();
+                          final areas = snapshot.data!;
+                          return DropdownButtonFormField<String>(
+                            decoration: const InputDecoration(
+                              labelText: 'Serve em alguma área?',
+                            ),
+                            value:
+                                (_dados['areaDeServico'] as String?)
+                                            ?.isNotEmpty ==
+                                        true
+                                    ? _dados['areaDeServico'] as String?
+                                    : null,
+                            items:
+                                areas
+                                    .map(
+                                      (area) => DropdownMenuItem(
+                                        value: area,
+                                        child: Text(area),
+                                      ),
+                                    )
+                                    .toList(),
+                            onChanged:
+                                (value) => setState(
+                                  () => _dados['areaDeServico'] = value ?? '',
+                                ),
+                            validator: (value) {
+                              if (_dados['cargoEclesiastico'] == true) {
+                                return value == null || value.isEmpty
+                                    ? 'Selecione um cargo Eclesiástico'
+                                    : null;
+                              }
+                              return null;
+                            },
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: _salvar,
+                        child: const Text('Salvar e Continuar'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _salvar,
-                    child: const Text('Salvar e Continuar'),
-                  )
-                ]),
+                ),
               ),
-            ),
     );
   }
 
@@ -138,7 +201,8 @@ class _CadastroScreenState extends State<CadastroScreen> {
       keyboardType: tipo,
       inputFormatters: formatter ?? [],
       decoration: InputDecoration(labelText: label),
-      validator: (value) => value == null || value.isEmpty ? 'Preencha o campo' : null,
+      validator:
+          (value) => value == null || value.isEmpty ? 'Preencha o campo' : null,
       onSaved: (value) => _dados[campo] = value ?? '',
     );
   }

@@ -27,11 +27,11 @@ class EnvioPedidosOracao extends StatelessWidget {
                 ),
                 IconButton(
                   icon: Icon(
-                    pedido.lido ? Icons.mark_email_read : Icons.mark_email_unread,
-                    color: pedido.lido ? Colors.green : Colors.grey,
+                    (pedido.lido ?? false) ? Icons.mark_email_read : Icons.mark_email_unread,
+                    color: (pedido.lido ?? false) ? Colors.green : Colors.grey,
                   ),
-                  tooltip: pedido.lido ? 'Já lido' : 'Marcar como lido',
-                  onPressed: pedido.lido
+                  tooltip: (pedido.lido ?? false) ? 'Já lido' : 'Marcar como lido',
+                  onPressed: (pedido.lido ?? false)
                       ? null
                       : () async {
                           await FirebaseFirestore.instance
@@ -48,12 +48,12 @@ class EnvioPedidosOracao extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              pedido.pedido,
+              pedido.mensagem ?? '',
               style: const TextStyle(fontSize: 15),
             ),
             const SizedBox(height: 8),
             Text(
-              '📅 ${pedido.criadoEm.day}/${pedido.criadoEm.month}/${pedido.criadoEm.year}',
+              '📅 ${pedido.dataCriacao?.day}/${pedido.dataCriacao?.month}/${pedido.dataCriacao?.year}',
               style: TextStyle(color: Colors.grey[600], fontSize: 12),
             ),
           ],
