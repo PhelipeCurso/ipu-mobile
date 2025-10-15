@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:ipu/screens/AgendaScreen.dart';
+import 'package:ipu/screens/agendar_gabinete_screen.dart';
+import 'package:ipu/screens/agendamentos_pastor_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class MenuLateralWidget extends StatefulWidget {
@@ -28,11 +30,13 @@ class MenuLateralWidget extends StatefulWidget {
 class _MenuLateralWidgetState extends State<MenuLateralWidget> {
   String _nome = '';
   String _imagem = '';
+  String? _tipoUsuario; // <- novo campo
 
   @override
   void initState() {
     super.initState();
     _carregarDadosUsuarioLocal();
+    _carregarTipoUsuarioFirestore();
   }
 
   Future<void> _carregarDadosUsuarioLocal() async {
@@ -46,12 +50,28 @@ class _MenuLateralWidgetState extends State<MenuLateralWidget> {
     });
   }
 
+  Future<void> _carregarTipoUsuarioFirestore() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final doc =
+        await FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(user.uid)
+            .get();
+
+    if (doc.exists && doc.data()!.containsKey('tipoUsuario')) {
+      setState(() {
+        _tipoUsuario = doc['tipoUsuario']; // membro ou pastor
+      });
+    }
+  }
+
   void _logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
     Navigator.pushReplacementNamed(context, '/');
   }
 
-  // Função para abrir link no app ou no navegador
   Future<void> _launchSocial(Uri appUri, String webUrl) async {
     if (await canLaunchUrl(appUri)) {
       await launchUrl(appUri, mode: LaunchMode.externalApplication);
@@ -87,11 +107,15 @@ class _MenuLateralWidgetState extends State<MenuLateralWidget> {
             ),
             decoration: const BoxDecoration(color: Colors.red),
           ),
+
+          // 🏠 Início
           ListTile(
             leading: const Icon(Icons.home),
             title: const Text('Início'),
             onTap: () => Navigator.pop(context),
           ),
+
+          // 📅 Agenda da Semana (permite apenas se tiver permissão)
           if (widget.podeGerenciarAgenda)
             ListTile(
               leading: const Icon(Icons.event),
@@ -109,34 +133,73 @@ class _MenuLateralWidgetState extends State<MenuLateralWidget> {
                 );
               },
             ),
-          // Redes Sociais Expansível
+
+          // 👇 Novo bloco GABINETE PASTORAL
+          if (_tipoUsuario != null)
+            ListTile(
+              leading: const Icon(Icons.meeting_room),
+              title: Text(
+                _tipoUsuario!.toLowerCase() == 'pastor'
+                    ? 'Agendamentos Recebidos'
+                    : 'Agendar Gabinete',
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (_) =>
+                            _tipoUsuario!.toLowerCase() == 'pastor'
+                                ? const AgendamentosPastorScreen()
+                                : const AgendarGabineteScreen(),
+                  ),
+                );
+              },
+            ),
+
+          // 🌐 Redes Sociais
           ExpansionTile(
             leading: const Icon(Icons.public),
             title: const Text('Redes Sociais'),
             children: [
               ListTile(
-                leading: const FaIcon(FontAwesomeIcons.youtube, color: Colors.red),
+                leading: const FaIcon(
+                  FontAwesomeIcons.youtube,
+                  color: Colors.red,
+                ),
                 title: const Text('YouTube'),
-                onTap: () => _launchSocial(
-                  Uri.parse("vnd.youtube://channel/UCAbi1Uzs9-CS-HskQNaQhmg"), // Troque pelo seu ID de canal
-                  "https://www.youtube.com/@IgrejaPovosUnidos/playlists",
-                ),
+                onTap:
+                    () => _launchSocial(
+                      Uri.parse(
+                        "vnd.youtube://channel/UCAbi1Uzs9-CS-HskQNaQhmg",
+                      ),
+                      "https://www.youtube.com/@IgrejaPovosUnidos/playlists",
+                    ),
               ),
               ListTile(
-                leading: const FaIcon(FontAwesomeIcons.tiktok, color: Colors.black),
+                leading: const FaIcon(
+                  FontAwesomeIcons.tiktok,
+                  color: Colors.black,
+                ),
                 title: const Text('TikTok'),
-                onTap: () => _launchSocial(
-                  Uri.parse("snssdk1128://user/profile/1234567890"), // Troque pelo ID numérico
-                  "https://www.tiktok.com/@igreja.povos.unidos?lang=pt-BR",
-                ),
+                onTap:
+                    () => _launchSocial(
+                      Uri.parse("snssdk1128://user/profile/1234567890"),
+                      "https://www.tiktok.com/@igreja.povos.unidos?lang=pt-BR",
+                    ),
               ),
               ListTile(
-                leading: const FaIcon(FontAwesomeIcons.instagram, color: Colors.purple),
-                title: const Text('Instagram'),
-                onTap: () => _launchSocial(
-                  Uri.parse("instagram://user?username=igrejapovosunidos"),
-                  "https://www.instagram.com/igrejapovosunidos",
+                leading: const FaIcon(
+                  FontAwesomeIcons.instagram,
+                  color: Colors.purple,
                 ),
+                title: const Text('Instagram'),
+                onTap:
+                    () => _launchSocial(
+                      Uri.parse("instagram://user?username=igrejapovosunidos"),
+                      "https://www.instagram.com/igrejapovosunidos",
+                    ),
               ),
             ],
           ),
@@ -150,6 +213,7 @@ class _MenuLateralWidgetState extends State<MenuLateralWidget> {
                 Navigator.pushNamed(context, '/lancamentos');
               },
             ),
+
           if (widget.podeVerPedidosOracao)
             ListTile(
               leading: const Icon(Icons.library_books),
@@ -159,6 +223,7 @@ class _MenuLateralWidgetState extends State<MenuLateralWidget> {
                 Navigator.pushNamed(context, '/pedidos-oracao');
               },
             ),
+
           if (widget.podeGerenciarAgenda)
             ListTile(
               leading: const Icon(Icons.calendar_today),
@@ -168,6 +233,7 @@ class _MenuLateralWidgetState extends State<MenuLateralWidget> {
                 Navigator.pushNamed(context, '/gerenciar-informacoes');
               },
             ),
+
           ListTile(
             leading: const Icon(Icons.favorite),
             title: const Text('Doação'),
@@ -181,11 +247,7 @@ class _MenuLateralWidgetState extends State<MenuLateralWidget> {
             leading: const Icon(Icons.location_on),
             title: const Text('📍 Faça-nos uma Visita'),
             onTap: () async {
-              const endereco =
-                  'Igreja Pentecostal Unida, Rua Exemplo, 123, Cidade - UF';
-              final encodedAddress = Uri.encodeComponent(endereco);
-              final googleMapsUrl = 'https://maps.app.goo.gl/co8P7qotMc9aG1jx6';
-
+              const googleMapsUrl = 'https://maps.app.goo.gl/co8P7qotMc9aG1jx6';
               if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
                 await launchUrl(
                   Uri.parse(googleMapsUrl),
@@ -200,6 +262,7 @@ class _MenuLateralWidgetState extends State<MenuLateralWidget> {
               }
             },
           ),
+
           const Divider(),
           ListTile(
             leading: const Icon(Icons.settings),
