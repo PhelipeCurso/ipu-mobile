@@ -87,7 +87,6 @@ class MyApp extends StatelessWidget {
         '/despesa': (context) => const LancamentoDespesaScreen(),
         '/lancamentos': (context) => const LancamentosFinanceirosScreen(),
         '/doacao': (context) => const DoacaoScreen(),
-        '/comprovante-pix': (context) => const ComprovantePixScreen(),
         '/welcome': (context) => const WelcomeScreen(),
         '/gerenciar-informacoes': (context) => const GerenciarInformacoesPage(),
         '/eventos': (context) => const EventosScreen(),

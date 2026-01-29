@@ -3,8 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../app.dart'; // para AppColors
-
+import '../app.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,21 +14,115 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _mostrarFormulario = false;
+  bool _loading = false;
 
+  final _emailController = TextEditingController();
+  final _senhaController = TextEditingController();
+
+  // =====================================================
   @override
   void initState() {
     super.initState();
+
     Future.delayed(const Duration(milliseconds: 300), () {
-      setState(() => _mostrarFormulario = true);
+      if (mounted) setState(() => _mostrarFormulario = true);
     });
   }
 
+  // =====================================================
+  // LIMPEZA DE MEMÓRIA (OBRIGATÓRIO)
+  // =====================================================
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _senhaController.dispose();
+    super.dispose();
+  }
+
+  // =====================================================
+  // RESET SENHA
+  // =====================================================
+  Future<void> resetSenha() async {
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty) {
+      _snack('Digite seu e-mail primeiro');
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      _snack('Enviamos um link de redefinição. Ele expira em alguns minutos. Se não funcionar, solicite novamente.');
+    } on FirebaseAuthException catch (e) {
+      _snack(e.message ?? 'Erro ao enviar e-mail');
+    }
+  }
+
+  // =====================================================
+  // LOGIN EMAIL/SENHA
+  // =====================================================
+  Future<void> loginEmailSenha(BuildContext context) async {
+    final email = _emailController.text.trim();
+    final senha = _senhaController.text.trim();
+
+    if (email.isEmpty || senha.isEmpty) {
+      _snack('Preencha e-mail e senha');
+      return;
+    }
+
+    try {
+      setState(() => _loading = true);
+
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: senha,
+      );
+
+      final uid = cred.user!.uid;
+
+      final doc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .get();
+
+      if (!mounted) return;
+
+      if (doc.exists) {
+        Navigator.pushReplacementNamed(context, '/welcome');
+      } else {
+        Navigator.pushReplacementNamed(context, '/cadastro');
+      }
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'user-not-found':
+          _snack('Usuário não encontrado');
+          break;
+        case 'wrong-password':
+          _snack('Senha incorreta');
+          break;
+        case 'invalid-email':
+          _snack('E-mail inválido');
+          break;
+        default:
+          _snack(e.message ?? 'Erro no login');
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // =====================================================
+  // LOGIN GOOGLE
+  // =====================================================
   Future<void> loginComGoogle(BuildContext context) async {
     try {
+      setState(() => _loading = true);
+
       final googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) return;
 
       final googleAuth = await googleUser.authentication;
+
       final cred = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -37,42 +130,45 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final userCredential =
           await FirebaseAuth.instance.signInWithCredential(cred);
-      final uid = userCredential.user?.uid;
+
+      final uid = userCredential.user!.uid;
 
       final doc = await FirebaseFirestore.instance
           .collection('usuarios')
           .doc(uid)
           .get();
 
+      if (!mounted) return;
+
       if (doc.exists) {
         Navigator.pushReplacementNamed(context, '/welcome');
       } else {
         Navigator.pushReplacementNamed(context, '/cadastro');
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao fazer login: $e')),
-      );
+    } catch (_) {
+      _snack('Erro ao fazer login com Google');
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
+  // =====================================================
+  void _snack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
+  }
+
+  // =====================================================
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Imagem de fundo
-          Image.asset(
-            'assets/img/login.png',
-            fit: BoxFit.cover,
-          ),
-          // Overlay escura
+          Image.asset('assets/img/login.png', fit: BoxFit.cover),
           Container(color: Colors.black.withOpacity(0.4)),
 
-          // Conteúdo com animação
           if (_mostrarFormulario)
             Positioned(
               left: 0,
@@ -85,90 +181,96 @@ class _LoginScreenState extends State<LoginScreen> {
                     begin: Offset(0, 1),
                     end: Offset(0, 0),
                     duration: Duration(milliseconds: 800),
-                    curve: Curves.easeOut,
                   ),
                 ],
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 32,
+                  ),
                   margin: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withAlpha((255 * 0.65).toInt()),
+                    color: Colors.white.withOpacity(0.9),
                     borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha((255 * 0.2).toInt()),
-                        blurRadius: 20,
-                      )
-                    ],
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const Text(
-                        'Bem-Vindo!👋🏽✊🏽✌🏽️',
+                        'Bem-Vindo! 👋🏽✊🏽✌🏽️',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: AppColors.vermelho,
                         ),
-                        textAlign: TextAlign.center,
                       ),
+
                       const SizedBox(height: 24),
+
                       TextFormField(
-                        decoration: const InputDecoration(labelText: 'E-mail'),
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration:
+                            const InputDecoration(labelText: 'E-mail'),
                       ),
+
                       const SizedBox(height: 12),
+
                       TextFormField(
+                        controller: _senhaController,
                         obscureText: true,
-                        decoration: const InputDecoration(labelText: 'Senha'),
+                        decoration:
+                            const InputDecoration(labelText: 'Senha'),
                       ),
-                      const SizedBox(height: 24),
+
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: resetSenha,
+                          child: const Text('Esqueci minha senha'),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
                       ElevatedButton(
+                        onPressed:
+                            _loading ? null : () => loginEmailSenha(context),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.vermelho,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          minimumSize: const Size(double.infinity, 48),
                         ),
-                        onPressed: () {
-                          // futura autenticação por e-mail
-                        },
-                        child: const Text('Entrar'),
+                        child: _loading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white)
+                            : const Text('Entrar'),
                       ),
+
                       const SizedBox(height: 12),
+
                       ElevatedButton.icon(
-                        icon: Image.asset(
-                          'assets/img/google.png',
-                          height: 24,
-                          width: 24,
-                        ),
-                        label: const Text(
-                          'Entrar com Google',
-                          style: TextStyle(color: Colors.black),
-                        ),
+                        onPressed:
+                            _loading ? null : () => loginComGoogle(context),
+                        icon: Image.asset('assets/img/google.png', height: 22),
+                        label: const Text('Entrar com Google'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: const BorderSide(color: Colors.grey),
-                          ),
+                          foregroundColor: Colors.black,
+                          minimumSize: const Size(double.infinity, 48),
                         ),
-                        onPressed: () => loginComGoogle(context),
                       ),
+
                       const SizedBox(height: 16),
+
                       GestureDetector(
-                        onTap: () => Navigator.pushNamed(context, '/cadastro'),
+                        onTap: () =>
+                            Navigator.pushNamed(context, '/cadastro'),
                         child: const Text(
                           'Não tem conta? Cadastre-se',
                           style: TextStyle(
                             color: AppColors.vermelho,
                             decoration: TextDecoration.underline,
                           ),
-                          textAlign: TextAlign.center,
                         ),
                       ),
                     ],

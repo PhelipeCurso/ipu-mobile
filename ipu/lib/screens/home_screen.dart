@@ -310,7 +310,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.pushNamed(context, '/doacao');
       },
       icon: const Icon(Icons.favorite),
-      label: const Text('Doar Agora 💖', style: TextStyle(fontSize: 18)),
+      label: const Text('Faça sua Contribuição 💖', style: TextStyle(fontSize: 18)),
     );
   }
 

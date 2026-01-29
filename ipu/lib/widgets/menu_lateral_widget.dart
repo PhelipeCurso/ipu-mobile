@@ -236,7 +236,7 @@ class _MenuLateralWidgetState extends State<MenuLateralWidget> {
 
           ListTile(
             leading: const Icon(Icons.favorite),
-            title: const Text('Doação'),
+            title: const Text('Contribua'),
             onTap: () {
               Navigator.pop(context);
               Navigator.pushNamed(context, '/doacao');

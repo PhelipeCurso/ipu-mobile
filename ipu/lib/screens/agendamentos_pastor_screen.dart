@@ -7,8 +7,7 @@ class AgendamentosPastorScreen extends StatefulWidget {
   const AgendamentosPastorScreen({super.key});
 
   @override
-  State<AgendamentosPastorScreen> createState() =>
-      _AgendamentosPastorScreenState();
+  State<AgendamentosPastorScreen> createState() => _AgendamentosPastorScreenState();
 }
 
 class _AgendamentosPastorScreenState extends State<AgendamentosPastorScreen>
@@ -29,31 +28,48 @@ class _AgendamentosPastorScreenState extends State<AgendamentosPastorScreen>
     super.dispose();
   }
 
-  /// Define cor conforme status
+  /// Define cor do card conforme o status
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'confirmado':
-        return Colors.green.shade400;
-      case 'cancelado':
-        return Colors.red.shade400;
+        return Colors.green.shade100;
       case 'reagendado':
-        return Colors.blue.shade400;
+        return Colors.blue.shade100;
+      case 'cancelado':
+        return Colors.red.shade100;
+      case 'pendente':
       default:
-        return Colors.amber.shade400; // pendente
+        return Colors.amber.shade100;
     }
   }
 
-  /// Ícone visual por status
+  /// Define ícone conforme o status
   IconData _getStatusIcon(String status) {
     switch (status.toLowerCase()) {
       case 'confirmado':
         return Icons.check_circle;
+      case 'reagendado':
+        return Icons.autorenew;
       case 'cancelado':
         return Icons.cancel;
-      case 'reagendado':
-        return Icons.calendar_month;
+      case 'pendente':
       default:
         return Icons.hourglass_bottom;
+    }
+  }
+
+  /// Define cor do ícone conforme o status
+  Color _getIconColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'confirmado':
+        return Colors.green;
+      case 'reagendado':
+        return Colors.blue;
+      case 'cancelado':
+        return Colors.red;
+      case 'pendente':
+      default:
+        return Colors.orange;
     }
   }
 
@@ -65,12 +81,8 @@ class _AgendamentosPastorScreenState extends State<AgendamentosPastorScreen>
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(
-                icon: Icon(Icons.event_note, color: Colors.green),
-                text: "Criados por mim"),
-            Tab(
-                icon: Icon(Icons.inbox, color: Colors.blue),
-                text: "Recebidos dos membros"),
+            Tab(icon: Icon(Icons.event_note, color: Colors.green), text: "Criados por mim"),
+            Tab(icon: Icon(Icons.inbox, color: Colors.blue), text: "Recebidos dos membros"),
           ],
         ),
       ),
@@ -89,7 +101,7 @@ class _AgendamentosPastorScreenState extends State<AgendamentosPastorScreen>
     );
   }
 
-  /// Lista de agendamentos
+  /// Lista de agendamentos (criados pelo pastor ou recebidos dos membros)
   Widget _buildListaAgendamentos(String criadoPor) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -122,12 +134,13 @@ class _AgendamentosPastorScreenState extends State<AgendamentosPastorScreen>
             final membro = dados['nomeMembro'] ?? '';
 
             return Card(
-              color: _getStatusColor(status).withOpacity(0.15),
+              color: _getStatusColor(status),
               margin: const EdgeInsets.all(8),
               child: ListTile(
                 leading: Icon(
                   _getStatusIcon(status),
-                  color: _getStatusColor(status),
+                  color: _getIconColor(status),
+                  size: 32,
                 ),
                 title: Text(
                   motivo,
@@ -137,7 +150,6 @@ class _AgendamentosPastorScreenState extends State<AgendamentosPastorScreen>
                   "Membro: $membro\n"
                   "Data: ${data != null ? data.toString().substring(0, 16) : 'Sem data'}\n"
                   "Status: $status",
-                  style: TextStyle(color: _getStatusColor(status)),
                 ),
                 trailing: criadoPor == "membro"
                     ? PopupMenuButton<String>(
@@ -166,11 +178,9 @@ class _AgendamentosPastorScreenState extends State<AgendamentosPastorScreen>
                                   novaHora.hour,
                                   novaHora.minute,
                                 );
-
-                                // ✅ Atualiza a data e o status ao reagendar
                                 await doc.reference.update({
                                   'data': novaDataCompleta,
-                                  'status': 'reagendado',
+                                  'status': 'reagendado', // <-- salva o status corretamente
                                 });
                               }
                             }
@@ -200,7 +210,7 @@ class _AgendamentosPastorScreenState extends State<AgendamentosPastorScreen>
     );
   }
 
-  /// Formulário para novo agendamento
+  /// Formulário para o pastor criar novo agendamento
   Future<void> _abrirFormularioAgendamento(BuildContext context) async {
     final membrosSnapshot = await FirebaseFirestore.instance
         .collection('usuarios')
@@ -231,8 +241,7 @@ class _AgendamentosPastorScreenState extends State<AgendamentosPastorScreen>
                     );
                   }).toList(),
                   onChanged: (value) => setState(() => membroSelecionadoId = value),
-                  decoration:
-                      const InputDecoration(labelText: "Selecione o Membro"),
+                  decoration: const InputDecoration(labelText: "Selecione o Membro"),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -284,9 +293,7 @@ class _AgendamentosPastorScreenState extends State<AgendamentosPastorScreen>
           ),
         ),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancelar")),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
             onPressed: () async {
