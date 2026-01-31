@@ -4,6 +4,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../app.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,14 +17,17 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _mostrarFormulario = false;
   bool _loading = false;
+  bool lembrarLogin = false;
 
   final _emailController = TextEditingController();
   final _senhaController = TextEditingController();
+  final _secureStorage = const FlutterSecureStorage();
 
   // =====================================================
   @override
   void initState() {
     super.initState();
+    _carregarLoginSalvo();
 
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) setState(() => _mostrarFormulario = true);
@@ -30,13 +35,50 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // =====================================================
-  // LIMPEZA DE MEMÓRIA (OBRIGATÓRIO)
+  // LIMPEZA DE MEMÓRIA
   // =====================================================
   @override
   void dispose() {
     _emailController.dispose();
     _senhaController.dispose();
     super.dispose();
+  }
+
+  // =====================================================
+  // CARREGAR LOGIN SALVO
+  // =====================================================
+  Future<void> _carregarLoginSalvo() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final email = prefs.getString('email');
+    final lembrar = prefs.getBool('lembrar') ?? false;
+    final senha = await _secureStorage.read(key: 'senha');
+
+    if (lembrar) {
+      _emailController.text = email ?? '';
+      _senhaController.text = senha ?? '';
+    }
+
+    if (mounted) {
+      setState(() => lembrarLogin = lembrar);
+    }
+  }
+
+  // =====================================================
+  // SALVAR / LIMPAR LOGIN
+  // =====================================================
+  Future<void> _salvarLogin(String email, String senha) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (lembrarLogin) {
+      await prefs.setString('email', email);
+      await prefs.setBool('lembrar', true);
+      await _secureStorage.write(key: 'senha', value: senha);
+    } else {
+      await prefs.remove('email');
+      await prefs.setBool('lembrar', false);
+      await _secureStorage.delete(key: 'senha');
+    }
   }
 
   // =====================================================
@@ -52,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-      _snack('Enviamos um link de redefinição. Ele expira em alguns minutos. Se não funcionar, solicite novamente.');
+      _snack('Link de redefinição enviado para seu e-mail');
     } on FirebaseAuthException catch (e) {
       _snack(e.message ?? 'Erro ao enviar e-mail');
     }
@@ -78,6 +120,9 @@ class _LoginScreenState extends State<LoginScreen> {
         password: senha,
       );
 
+      // 🔥 salva se marcado
+      await _salvarLogin(email, senha);
+
       final uid = cred.user!.uid;
 
       final doc = await FirebaseFirestore.instance
@@ -99,9 +144,6 @@ class _LoginScreenState extends State<LoginScreen> {
           break;
         case 'wrong-password':
           _snack('Senha incorreta');
-          break;
-        case 'invalid-email':
-          _snack('E-mail inválido');
           break;
         default:
           _snack(e.message ?? 'Erro no login');
@@ -131,14 +173,14 @@ class _LoginScreenState extends State<LoginScreen> {
       final userCredential =
           await FirebaseAuth.instance.signInWithCredential(cred);
 
+      if (!mounted) return;
+
       final uid = userCredential.user!.uid;
 
       final doc = await FirebaseFirestore.instance
           .collection('usuarios')
           .doc(uid)
           .get();
-
-      if (!mounted) return;
 
       if (doc.exists) {
         Navigator.pushReplacementNamed(context, '/welcome');
@@ -154,9 +196,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // =====================================================
   void _snack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
   }
 
   // =====================================================
@@ -223,6 +264,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             const InputDecoration(labelText: 'Senha'),
                       ),
 
+                      // 🔥 NOVO CHECKBOX
+                      CheckboxListTile(
+                        value: lembrarLogin,
+                        onChanged: (v) =>
+                            setState(() => lembrarLogin = v ?? false),
+                        title: const Text("Lembrar meu login"),
+                        controlAffinity:
+                            ListTileControlAffinity.leading,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
@@ -231,7 +283,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
 
                       ElevatedButton(
                         onPressed:

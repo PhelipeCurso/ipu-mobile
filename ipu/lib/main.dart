@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -34,17 +36,17 @@ void main() async {
   FirebaseMessaging messaging = FirebaseMessaging.instance;
 
   // ✅ Solicita permissão
-  NotificationSettings settings = await messaging.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
-
+  await messaging.requestPermission();
+  
   // ✅ Inscreve em tópicos
-  await messaging.subscribeToTopic('agendaEventos');
-  await messaging.subscribeToTopic('eventos');
-  await messaging.subscribeToTopic('noticias');
-  await messaging.subscribeToTopic('aniversariantes');
+ FirebaseAuth.instance.authStateChanges().listen((user) async {
+  if (user != null) {
+    await FirebaseMessaging.instance.subscribeToTopic('agendaEventos');
+    await FirebaseMessaging.instance.subscribeToTopic('eventos');
+    await FirebaseMessaging.instance.subscribeToTopic('noticias');
+    await FirebaseMessaging.instance.subscribeToTopic('aniversariantes');
+  }
+});
 
   // ✅ Ouve mensagens recebidas com o app aberto
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
