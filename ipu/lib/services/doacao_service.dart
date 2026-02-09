@@ -8,48 +8,50 @@ class DoacaoService {
   Future<String> criarDoacao({
     required double valor,
     required String tipo,
+    String? mesRef,
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
       throw Exception('Usuário não autenticado');
     }
 
-    final userDoc =
-        await _db.collection('usuarios').doc(user.uid).get();
+    final userDoc = await _db.collection('usuarios').doc(user.uid).get();
 
     final segmento = userDoc.data()?['areaDeServico'] ?? 'desconhecido';
 
-    final docRef = await _db.collection('doacoes').add({
+    // =========================
+    // Monta objeto primeiro
+    // =========================
+    final Map<String, dynamic> data = {
       'valor': valor,
       'valorCentavos': (valor * 100).round(),
       'usuarioId': user.uid,
       'segmento': segmento,
-      'tipo': tipo, // dizimo | oferta
+      'tipo': tipo,
       'origem': 'app-mobile',
       'gateway': 'manual_pix',
       'dataDoacao': FieldValue.serverTimestamp(),
       'data': Timestamp.now(),
 
-      // controle financeiro
-      'status': 'pendente', // pendente | confirmado | cancelado
+      // financeiro
+      'status': 'pendente',
       'comprovanteUrl': null,
 
       // auditoria
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    };
+
+    // adiciona mesRef apenas para dízimo
+    if (mesRef != null) {
+      data['mesRef'] = mesRef;
+    }
+
+    // =========================
+    // salva uma única vez
+    // =========================
+    final docRef = await _db.collection('doacoes').add(data);
 
     return docRef.id;
-  }
-
-  Future<void> confirmarDoacao({
-    required String doacaoId,
-    required String comprovanteUrl,
-  }) async {
-    await _db.collection('doacoes').doc(doacaoId).update({
-      'status': 'confirmado',
-      'comprovanteUrl': comprovanteUrl,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
   }
 }

@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../app.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:local_auth/local_auth.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,25 +18,28 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _mostrarFormulario = false;
   bool _loading = false;
+
   bool lembrarLogin = false;
+  bool biometriaDisponivel = false;
 
   final _emailController = TextEditingController();
   final _senhaController = TextEditingController();
+
   final _secureStorage = const FlutterSecureStorage();
+  final _auth = LocalAuthentication();
 
   // =====================================================
   @override
   void initState() {
     super.initState();
     _carregarLoginSalvo();
+    _verificarBiometria();
 
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) setState(() => _mostrarFormulario = true);
     });
   }
 
-  // =====================================================
-  // LIMPEZA DE MEMÓRIA
   // =====================================================
   @override
   void dispose() {
@@ -65,7 +69,74 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // =====================================================
-  // SALVAR / LIMPAR LOGIN
+  // BIOMETRIA
+  // =====================================================
+  Future<void> _verificarBiometria() async {
+    final canCheck = await _auth.canCheckBiometrics;
+    final supported = await _auth.isDeviceSupported();
+
+    if (mounted) {
+      setState(() {
+        biometriaDisponivel = canCheck && supported;
+      });
+    }
+  }
+
+  Future<bool> _autenticarBiometria() async {
+    try {
+      return await _auth.authenticate(
+        localizedReason: 'Confirme sua identidade para entrar',
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          stickyAuth: true,
+        ),
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _loginComBiometria() async {
+    final ok = await _autenticarBiometria();
+    if (!ok) return;
+
+    final email = _emailController.text;
+    final senha = await _secureStorage.read(key: 'senha');
+
+    if (email.isEmpty || senha == null) {
+      _snack('Ative "Lembrar meu login" primeiro');
+      return;
+    }
+
+    try {
+      setState(() => _loading = true);
+
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: senha,
+      );
+
+      final uid = cred.user!.uid;
+
+      final doc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .get();
+
+      if (!mounted) return;
+
+      if (doc.exists) {
+        Navigator.pushReplacementNamed(context, '/welcome');
+      } else {
+        Navigator.pushReplacementNamed(context, '/cadastro');
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // =====================================================
+  // SALVAR LOGIN
   // =====================================================
   Future<void> _salvarLogin(String email, String senha) async {
     final prefs = await SharedPreferences.getInstance();
@@ -81,8 +152,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // =====================================================
-  // RESET SENHA
   // =====================================================
   Future<void> resetSenha() async {
     final email = _emailController.text.trim();
@@ -120,7 +189,6 @@ class _LoginScreenState extends State<LoginScreen> {
         password: senha,
       );
 
-      // 🔥 salva se marcado
       await _salvarLogin(email, senha);
 
       final uid = cred.user!.uid;
@@ -136,17 +204,6 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacementNamed(context, '/welcome');
       } else {
         Navigator.pushReplacementNamed(context, '/cadastro');
-      }
-    } on FirebaseAuthException catch (e) {
-      switch (e.code) {
-        case 'user-not-found':
-          _snack('Usuário não encontrado');
-          break;
-        case 'wrong-password':
-          _snack('Senha incorreta');
-          break;
-        default:
-          _snack(e.message ?? 'Erro no login');
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -173,8 +230,6 @@ class _LoginScreenState extends State<LoginScreen> {
       final userCredential =
           await FirebaseAuth.instance.signInWithCredential(cred);
 
-      if (!mounted) return;
-
       final uid = userCredential.user!.uid;
 
       final doc = await FirebaseFirestore.instance
@@ -187,8 +242,6 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         Navigator.pushReplacementNamed(context, '/cadastro');
       }
-    } catch (_) {
-      _snack('Erro ao fazer login com Google');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -225,10 +278,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 32,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                   margin: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.9),
@@ -264,7 +315,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             const InputDecoration(labelText: 'Senha'),
                       ),
 
-                      // 🔥 NOVO CHECKBOX
                       CheckboxListTile(
                         value: lembrarLogin,
                         onChanged: (v) =>
@@ -311,6 +361,22 @@ class _LoginScreenState extends State<LoginScreen> {
                           minimumSize: const Size(double.infinity, 48),
                         ),
                       ),
+
+                      // 🔥 BOTÃO BIOMETRIA (única adição)
+                      if (biometriaDisponivel && lembrarLogin)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: ElevatedButton.icon(
+                            onPressed:
+                                _loading ? null : _loginComBiometria,
+                            icon: const Icon(Icons.fingerprint),
+                            label: const Text('Entrar com biometria'),
+                            style: ElevatedButton.styleFrom(
+                              minimumSize:
+                                  const Size(double.infinity, 48),
+                            ),
+                          ),
+                        ),
 
                       const SizedBox(height: 16),
 

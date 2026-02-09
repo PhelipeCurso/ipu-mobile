@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../app.dart';
-import '../services/doacao_service.dart';
-import 'ComprovantePixScreen.dart';
+import '../../app.dart';
+import '../../services/doacao_service.dart';
+import '../ComprovantePixScreen.dart';
 
 class DoacaoScreen extends StatefulWidget {
   const DoacaoScreen({super.key});
