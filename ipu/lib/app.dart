@@ -14,7 +14,6 @@ import 'screens/LancamentoReceitaScreen.dart';
 import 'screens/MeusLancamentosScreen.dart';
 import 'screens/LancamentoDespesaScreen.dart';
 import 'screens/LancamentosFinanceirosScreen.dart';
-import 'screens/doacoes/DoacaoScreen.dart';
 import 'screens/WelcomeScreen.dart';
 import 'screens/gerenciar_informacoes_page.dart';
 import 'screens/eventos_screen.dart';

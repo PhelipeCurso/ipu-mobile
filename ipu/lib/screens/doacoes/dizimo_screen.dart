@@ -42,8 +42,7 @@ class _DizimoScreenState extends State<DizimoScreen> {
   // PAGAR
   // =========================
   Future<void> _pagar() async {
-    final valor =
-        double.tryParse(_controller.text.replaceAll(',', '.'));
+    final valor = double.tryParse(_controller.text.replaceAll(',', '.'));
 
     if (valor == null || valor <= 0) return;
 
@@ -61,10 +60,7 @@ class _DizimoScreenState extends State<DizimoScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ComprovantePixScreen(
-            doacaoId: id,
-            valor: valor,
-          ),
+          builder: (_) => ComprovantePixScreen(doacaoId: id, valor: valor),
         ),
       );
     } finally {
@@ -82,11 +78,13 @@ class _DizimoScreenState extends State<DizimoScreen> {
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('usuarios')
-              .doc(uid)
-              .collection('dizimos')
-              .snapshots(),
+          // ✅ QUERY CORRIGIDA AQUI
+          stream:
+              FirebaseFirestore.instance
+                  .collection('doacoes')
+                  .where('usuarioId', isEqualTo: uid)
+                  .where('tipo', isEqualTo: 'dizimo')
+                  .snapshots(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
@@ -94,13 +92,23 @@ class _DizimoScreenState extends State<DizimoScreen> {
 
             final docs = snapshot.data!.docs;
 
-            final Map<String, String> statusMap = {
-              for (var d in docs) d.id: d['status']
-            };
+            // agora usa mesRef como chave
+            final Map<String, String> statusMap = {};
 
-            final confirmado = statusMap.values
-                .where((s) => s == 'confirmado')
-                .length;
+            for (var d in docs) {
+              final data = d.data() as Map<String, dynamic>;
+
+              if (!data.containsKey('mesRef'))
+                continue; // ← ignora docs antigos
+
+              final mes = data['mesRef'];
+              final status = data['status'];
+
+              statusMap[mes] = status;
+            }
+
+            final confirmado =
+                statusMap.values.where((s) => s == 'confirmado').length;
 
             final fidelidade = ((confirmado / 12) * 100).round();
 
@@ -140,11 +148,10 @@ class _DizimoScreenState extends State<DizimoScreen> {
       color: cor.withOpacity(0.15),
       child: ListTile(
         leading: Icon(Icons.verified, color: cor),
-        title: Text(status,
-            style: TextStyle(
-              color: cor,
-              fontWeight: FontWeight.bold,
-            )),
+        title: Text(
+          status,
+          style: TextStyle(color: cor, fontWeight: FontWeight.bold),
+        ),
         subtitle: Text('Fidelidade anual: $fidelidade%'),
       ),
     );
@@ -153,8 +160,18 @@ class _DizimoScreenState extends State<DizimoScreen> {
   // =========================
   Widget _formPagamento() {
     final nomes = [
-      'Jan','Fev','Mar','Abr','Mai','Jun',
-      'Jul','Ago','Set','Out','Nov','Dez'
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
     ];
 
     return Card(
@@ -165,20 +182,22 @@ class _DizimoScreenState extends State<DizimoScreen> {
             DropdownButtonFormField<String>(
               value: _mesSelecionado,
               decoration: const InputDecoration(labelText: 'Mês referência'),
-              items: _mesesAno().map((id) {
-                final mes = int.parse(id.split('-')[1]);
-                return DropdownMenuItem(
-                  value: id,
-                  child: Text('${nomes[mes - 1]}'),
-                );
-              }).toList(),
+              items:
+                  _mesesAno().map((id) {
+                    final mes = int.parse(id.split('-')[1]);
+                    return DropdownMenuItem(
+                      value: id,
+                      child: Text('${nomes[mes - 1]}'),
+                    );
+                  }).toList(),
               onChanged: (v) => setState(() => _mesSelecionado = v!),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _controller,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(
                 labelText: 'Valor (R\$)',
                 border: OutlineInputBorder(),
@@ -200,8 +219,18 @@ class _DizimoScreenState extends State<DizimoScreen> {
     final ano = DateTime.now().year;
 
     final nomes = [
-      'Jan','Fev','Mar','Abr','Mai','Jun',
-      'Jul','Ago','Set','Out','Nov','Dez'
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
     ];
 
     return ListView.builder(
@@ -245,9 +274,9 @@ class _DizimoScreenState extends State<DizimoScreen> {
     if (map.containsValue('pendente')) return 'Pendente';
 
     final mesAtual = DateTime.now().month;
+
     for (int i = 1; i <= mesAtual; i++) {
-      final id =
-          '${DateTime.now().year}-${i.toString().padLeft(2, '0')}';
+      final id = '${DateTime.now().year}-${i.toString().padLeft(2, '0')}';
       if (map[id] != 'confirmado') return 'Atrasado';
     }
 
